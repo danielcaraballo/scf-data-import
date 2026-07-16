@@ -1,8 +1,9 @@
 from typing import Any
 
-CATALOGOS_CSV = "catalogos.csv"
-ORGANIZACION_CSV = "organizacion.csv"
-VEHICULOS_CSV = "vehiculos.csv"
+# ATENCIÓN: CATALOG_MODELS se itera en orden de definición.
+# Las entidades con FK (modelo→marca, tipo_falla→sistema_afectado)
+# deben aparecer DESPUÉS de su dependencia para que el builder
+# resuelva las claves foráneas correctamente.
 
 CATALOG_MODELS: dict[str, Any] = {
     "marca": {
