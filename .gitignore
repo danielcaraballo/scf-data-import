@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+data/*.csv
+data/*.xlsx
+output/fixtures/
+*:Zone.Identifier
+*.egg-info/
+dist/
+build/

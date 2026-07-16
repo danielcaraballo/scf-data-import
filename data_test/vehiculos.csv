@@ -1,0 +1,4 @@
+numero_economico,vin,placa,color_placa,placa_intt,serial_motor,numero_unidad,marca,modelo,anio,color,tipo_uso,clase,tipo_combustible,estatus,estado,gerencia,unidad_usuaria,emplazamiento,categoria
+ECO-001,8AP1213ABCD12345,AB-123,Azul,INT-456,MOTOR-789,UN-001,Chevrolet,Onix,2022,Rojo,24 horas,Liviano,Gasolina,Operativo,Distrito Capital,Talento Humano,Talento Humano,Almacen Chacao,Sedan
+ECO-002,8AP1213ABCD12346,AB-124,Azul,INT-457,MOTOR-790,UN-002,Chevrolet,Silverado,2023,Azul,24 horas,Pesado,Diesel,Taller,Amazonas,Talento Humano,Logistica,Base Amazonas,Pickup
+ECO-003,8AP1213ABCD12347,AB-125,Blanco,INT-458,MOTOR-791,UN-003,Ford,Ranger,2021,Blanco,8 horas,Liviano,Gasolina,Operativo,Distrito Capital,Logistica,Logistica,Almacen Chacao,Pickup
