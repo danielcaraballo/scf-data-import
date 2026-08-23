@@ -1,10 +1,8 @@
 from pathlib import Path
 
-import pytest
-
 from scf_import.builders.catalogos import build_catalogos
 from scf_import.builders.organizacion import build_organizacion
-from scf_import.readers import read_catalogos, read_organizacion
+from scf_import.extract import read_catalogos, read_organizacion
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data_test"
 
@@ -14,7 +12,7 @@ def test_build_organizacion() -> None:
     _, cat_lookups, _ = build_catalogos(cat_df)
 
     org_df = read_organizacion(DATA_DIR / "organizacion.csv")
-    fixtures, lookups, errors = build_organizacion(org_df, cat_lookups)
+    fixtures, _lookups, errors = build_organizacion(org_df, cat_lookups)
 
     assert errors == []
     assert len(fixtures) > 0

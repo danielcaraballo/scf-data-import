@@ -1,14 +1,42 @@
+# Python & Virtual Environments
 venv/
+.venv/
+env/
 __pycache__/
-*.pyc
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-data/*.csv
-data/*.xlsx
-output/fixtures/
-*:Zone.Identifier
+*.py[cod]
+*$py.class
 *.egg-info/
 dist/
 build/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+
+# Tooling caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Raw and confidential data directory (only keep placeholder)
+data/*
+!data/.gitkeep
+!data/README.md
+
+# Pipeline outputs (CSV, XLSX, Fixtures, Reports)
+output/*
+!output/.gitkeep
+
+# Local logs and temporary exports
+*.log
+*.tmp
+
+# AI Assistant & Context notes (local only)
+agent.md
+AGENT.md
+.agent*
+
 

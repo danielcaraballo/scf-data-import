@@ -104,6 +104,56 @@ VEHICULO_COLUMN_MAP: dict[str, str] = {
     "categoria": "categoria",
 }
 
+# Mapeo de columnas del CSV de flota (AppSheet) → campos internos
+# Las claves están en mayúscula SIN acentos (tras limpieza de headers).
+FLOTA_COLUMN_MAP: dict[str, str] = {
+    "ESTADO": "estado",
+    "GERENCIA": "gerencia",
+    "UNIDAD USUARIA": "unidad_usuaria",
+    "EMPLAZAMIENTO": "emplazamiento",
+    "NUMERO DE UNIDAD": "numero_unidad",
+    "NUMERO DE ACTIVO SAP": "numero_economico",
+    "PLACA": "placa",
+    "PLACA INSTITUCIONAL": "placa",
+    "PLACA CORPORATIVA": "placa",
+    "PLACA CORPORACION ELECTRICA": "placa",
+    "COLOR DE PLACA": "color_placa",
+    "COLOR DE PLACA INSTITUCIONAL": "color_placa",
+    "COLOR DE PLACA CORPORATIVA": "color_placa",
+    "COLOR DE PLACA CORPORACION ELECTRICA": "color_placa",
+    "PLACA INTT": "placa_intt",
+    "SERIAL DE CARROCERIA": "vin",
+    "SERIAL MOTOR": "serial_motor",
+    "MARCA": "marca",
+    "MODELO": "modelo",
+    "CLASE": "clase",
+    "DENOMINACION DEL ACTIVO FIJO": "categoria",
+    "ANO": "anio",
+    "COLOR ACTUAL PREDOMINANTE": "color",
+    "TIPO COMBUSTIBLE": "tipo_combustible",
+    "TIPO ACEITE": "tipo_aceite",
+    "LITROS ACEITE": "litros_aceite",
+    "SITUACION": "estatus",
+    "TIPO DE ADSCRIPCION": "tipo_uso",
+    "KILOMETRAJE": "kilometraje",
+    "NOMBRES": "nombres",
+    "APELLIDOS": "apellidos",
+    "CEDULA DE IDENTIDAD": "cedula_identidad",
+    "NUMERO DE PERSONAL": "numero_personal",
+    "CARGO": "cargo",
+    "TELEFONO": "telefono",
+    "CORREO": "correo_institucional",
+    "CORREO ELECTRONICO": "correo_institucional",
+    "CORREO INSTITUCIONAL": "correo_institucional",
+    "CORREO CORPORATIVO": "correo_institucional",
+    "CORREO CORPORACION ELECTRICA": "correo_institucional",
+    "OBSERVACIONES": "observaciones",
+    "OBSERVACION CAMBIO DE ESTATUS": "observacion_estatus",
+}
+
+# Valores que indican "sin dato" en los CSVs de flota
+FLOTA_NA_PATTERNS: set[str] = {"S/P", "S/N", "S/I", "N/A"}
+
 VEHICULO_FK_MAP: dict[str, Any] = {
     "marca": {"field": "marca", "lookup": "marca"},
     "modelo": {"field": "modelo", "lookup": "modelo"},

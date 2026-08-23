@@ -5,12 +5,12 @@ import pytest
 from scf_import.builders.catalogos import build_catalogos
 from scf_import.builders.organizacion import build_organizacion
 from scf_import.builders.vehiculos import build_vehiculos
-from scf_import.readers import read_catalogos, read_organizacion, read_vehiculos
+from scf_import.extract import read_catalogos, read_organizacion, read_vehiculos
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data_test"
 
 
-@pytest.fixture()
+@pytest.fixture
 def lookups() -> tuple[dict, dict]:
     cat_df = read_catalogos(DATA_DIR / "catalogos.csv")
     _, cat_lookups, _ = build_catalogos(cat_df)

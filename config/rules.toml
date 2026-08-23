@@ -1,0 +1,78 @@
+# Reglas de validación y normalización para el pipeline ETL de Flota SCF
+
+[general]
+output_dir = "output"
+mappings_dir = "config/mappings"
+
+[fields]
+# Campos requeridos mínimos para considerar una fila procesable
+required = ["marca", "modelo", "estado"]
+
+[anio]
+min = 1950
+max = 2026
+
+[sap]
+min_digits = 6
+max_digits = 7
+na_patterns = [
+    "",
+    "0",
+    "NO POSEE",
+    "N0 P0SEE",
+    "NO TIENE",
+    "S/P",
+    "S/N",
+    "S/I",
+    "N/A",
+    "NA",
+    "NO APLICA",
+    "NONE",
+    "NULL",
+    "-",
+    ".",
+    "000000",
+    "0000000",
+]
+
+[vin]
+expected_length = 17
+na_patterns = [
+    "",
+    "S/P",
+    "S/N",
+    "S/I",
+    "N/A",
+    "NA",
+    "NO POSEE",
+    "N0 P0SEE",
+    "NO TIENE",
+    "0",
+    "-",
+    "SIN VIN",
+]
+
+[placa]
+mppee_prefix = "MPPEE-"
+na_patterns = [
+    "",
+    "S/P",
+    "S/N",
+    "S/I",
+    "N/A",
+    "NA",
+    "NO POSEE",
+    "MPPEE-",
+    "MPPEE",
+    "MPPEE ",
+    "-",
+]
+
+[quality]
+# Niveles de calidad:
+# - OK: todos los campos requeridos presentes, sin claves duplicadas, identificadores válidos
+# - ADVERTENCIA: problemas no críticos (VIN longitud != 17, SAP ausente o no numérico, km ausente, etc.)
+# - INVALIDO: faltan identificadores clave (sin SAP, sin VIN y sin Placa) o faltan campos obligatorios
+status_ok = "OK"
+status_warning = "ADVERTENCIA"
+status_invalid = "INVALIDO"

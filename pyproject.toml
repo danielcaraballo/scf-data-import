@@ -40,6 +40,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "PLR", "SLF", "ARG"]
+"src/scf_import/derived.py" = ["C901", "PLR0912", "PLR0915"]
+"src/scf_import/__main__.py" = ["PLR0915"]
+"run.py" = ["T201", "S", "C901", "PLR", "SLF", "ARG", "E501", "E402", "RUF001", "PLC0415"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -1,6 +1,4 @@
-import pytest
-
-from scf_import.validators import validate_required_fields
+from scf_import.validate import validate_required_fields
 
 
 class TestValidateRequiredFields:

@@ -1,12 +1,11 @@
-import pytest
 
 from scf_import.normalizers import (
-    normalize_name,
-    normalize_fk,
-    normalize_vin,
-    normalize_placa,
     normalize_anio,
+    normalize_fk,
+    normalize_name,
+    normalize_placa,
     normalize_row,
+    normalize_vin,
 )
 
 

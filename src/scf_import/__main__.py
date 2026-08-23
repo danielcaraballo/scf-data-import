@@ -1,169 +1,232 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import logging
 import sys
+import time
+import tomllib
 from pathlib import Path
 from typing import Any
 
 from scf_import.builders.catalogos import build_catalogos
 from scf_import.builders.organizacion import build_organizacion
 from scf_import.builders.vehiculos import build_vehiculos
-from scf_import.readers import read_catalogos, read_organizacion, read_vehiculos
+from scf_import.extract import (
+    extract_flota,
+    find_latest_flota_file,
+    read_catalogos,
+    read_organizacion,
+    read_vehiculos,
+)
+from scf_import.load import (
+    build_django_fixtures,
+    write_fixture_file,
+    write_normalized_csv,
+    write_normalized_excel,
+    write_revision_csv,
+)
+from scf_import.report import generate_report, log_report
+from scf_import.transform.canonical import CanonicalMapper
+from scf_import.transform.row import NormalizedRow, transform_row
+from scf_import.validate import validate_batch
 
-logger = logging.getLogger(__name__)
-
-FIXTURE_ORDER: list[tuple[str, str]] = [
-    ("01_catalogos.json", "catalogos"),
-    ("02_organizacion.json", "organizacion"),
-    ("03_vehiculos.json", "vehiculos"),
-]
-
-
-def write_fixture(path: Path, fixtures: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(fixtures, f, ensure_ascii=False, indent=2)
-
-
-def print_report(stage: str, count: int, errors: list[str]) -> None:
-    if errors:
-        logger.warning("%s: %d registros, %d errores", stage, count, len(errors))
-        for err in errors:
-            logger.warning("  ⚠ %s", err)
-    else:
-        logger.info("%s: %d registros", stage, count)
+logger = logging.getLogger("scf_import")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="SCF Data Import ETL")
-    parser.add_argument("--input", "-i", required=True, help="Directorio con los CSVs de entrada")
+    parser = argparse.ArgumentParser(
+        description="SCF Data Import - Pipeline ETL de Normalización de Flota",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    input_group = parser.add_mutually_exclusive_group()
+    input_group.add_argument(
+        "--flota",
+        "-f",
+        type=Path,
+        help="Ruta al archivo CSV o Excel de flota (ej. data/flota.2026-07-16.csv)",
+    )
+    input_group.add_argument(
+        "--dir",
+        "-d",
+        type=Path,
+        help="Directorio con archivos de flota (selecciona el flota.*.csv más reciente para cron)",
+    )
+    input_group.add_argument(
+        "--input",
+        "-i",
+        type=Path,
+        help="Modo legado: directorio con catalogos.csv, organizacion.csv, vehiculos.csv",
+    )
+
     parser.add_argument(
         "--output",
         "-o",
-        default="output/fixtures",
-        help="Directorio de salida para fixtures",
+        type=Path,
+        default=Path("output"),
+        help="Directorio base para archivos de salida (por defecto: output/)",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Solo validar sin escribir archivos")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Activar logging detallado")
+    parser.add_argument(
+        "--mappings",
+        "-m",
+        type=Path,
+        default=Path("config/mappings"),
+        help="Directorio de mappings CSV editables (por defecto: config/mappings/)",
+    )
+    parser.add_argument(
+        "--rules",
+        "-r",
+        type=Path,
+        default=Path("config/rules.toml"),
+        help="Archivo de reglas TOML (por defecto: config/rules.toml)",
+    )
+    parser.add_argument(
+        "--fixtures",
+        action="store_true",
+        help="Generar fixtures JSON para Django (01_catalogos, 02_organizacion, 03_vehiculos)",
+    )
+    parser.add_argument(
+        "--excel",
+        "-x",
+        action="store_true",
+        help="Generar archivo Excel (.xlsx) con la flota normalizada",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Ejecutar transformación y validación sin escribir archivos en disco",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Activar registro detallado (DEBUG)",
+    )
     return parser.parse_args()
 
 
-def validate_inputs(input_dir: Path) -> dict[str, Path]:
-    csv_files = {
-        "catalogos.csv": input_dir / "catalogos.csv",
-        "organizacion.csv": input_dir / "organizacion.csv",
-        "vehiculos.csv": input_dir / "vehiculos.csv",
-    }
-    for path in csv_files.values():
-        if not path.exists():
-            logger.error("No se encuentra %s", path)
-            sys.exit(1)
-    return csv_files
+def load_rules(rules_path: Path) -> dict[str, Any]:
+    if not rules_path.exists():
+        logger.warning("Archivo de reglas no encontrado en %s. Usando defaults.", rules_path)
+        return {}
+    with rules_path.open("rb") as f:
+        return tomllib.load(f)
 
 
-def process_catalogos(
-    path: Path,
-) -> tuple[list[dict[str, Any]], dict[str, dict[str, int]], list[str]]:
-    logger.info("Procesando catálogos...")
-    df = read_catalogos(path)
-    return build_catalogos(df)
-
-
-def process_organizacion(
-    path: Path,
-    catalog_lookups: dict[str, dict[str, int]],
-) -> tuple[list[dict[str, Any]], dict[str, dict[str, int]], list[str]]:
-    logger.info("Procesando organización...")
-    df = read_organizacion(path)
-    return build_organizacion(df, catalog_lookups)
-
-
-def process_vehiculos(
-    path: Path,
-    catalog_lookups: dict[str, dict[str, int]],
-    org_lookups: dict[str, dict[str, int]],
-) -> tuple[list[dict[str, Any]], list[str]]:
-    logger.info("Procesando vehículos...")
-    df = read_vehiculos(path)
-    return build_vehiculos(df, catalog_lookups, org_lookups)
-
-
-def write_outputs(
+def run_legacy_mode(
+    input_dir: Path,
     output_dir: Path,
-    cat_fixtures: list[dict[str, Any]],
-    org_fixtures: list[dict[str, Any]],
-    veh_fixtures: list[dict[str, Any]],
+    *,
+    is_dry_run: bool = False,
 ) -> None:
-    fixture_map = {
-        "catalogos": cat_fixtures,
-        "organizacion": org_fixtures,
-        "vehiculos": veh_fixtures,
-    }
-    logger.info("Escribiendo fixtures...")
-    for filename, key in FIXTURE_ORDER:
-        fixtures = fixture_map.get(key)
-        if fixtures is None:
-            continue
-        dst = output_dir / filename
-        write_fixture(dst, fixtures)
-        logger.info("  ✓ %s (%d registros)", dst, len(fixtures))
-    logger.info("ETL completado. Fixtures en: %s", output_dir.resolve())
+    logger.info("Ejecutando en modo legado desde: %s", input_dir)
+    cat_df = read_catalogos(input_dir / "catalogos.csv")
+    org_df = read_organizacion(input_dir / "organizacion.csv")
+    veh_df = read_vehiculos(input_dir / "vehiculos.csv")
+
+    cat_fixtures, cat_lookups, cat_errors = build_catalogos(cat_df)
+    org_fixtures, org_lookups, org_errors = build_organizacion(org_df, cat_lookups)
+    veh_fixtures, veh_errors = build_vehiculos(veh_df, cat_lookups, org_lookups)
+
+    total_errors = len(cat_errors) + len(org_errors) + len(veh_errors)
+    logger.info(
+        "Modo legado completado: %d catálogos, %d org, %d vehículos (%d errores)",
+        len(cat_fixtures),
+        len(org_fixtures),
+        len(veh_fixtures),
+        total_errors,
+    )
+
+    if is_dry_run:
+        logger.info("Dry-run activado: no se escribieron fixtures.")
+        return
+
+    write_fixture_file(output_dir / "01_catalogos.json", cat_fixtures)
+    write_fixture_file(output_dir / "02_organizacion.json", org_fixtures)
+    write_fixture_file(output_dir / "03_vehiculos.json", veh_fixtures)
+    logger.info("Fixtures legadas escritas en: %s", output_dir)
+
+
+def _resolve_input_file(args: argparse.Namespace) -> Path:
+    if args.flota:
+        return Path(args.flota)
+    if args.dir:
+        try:
+            flota_path = find_latest_flota_file(args.dir)
+        except FileNotFoundError:
+            logger.exception("Error buscando archivo en %s", args.dir)
+            sys.exit(1)
+        else:
+            logger.info("Archivo más reciente detectado: %s", flota_path)
+            return flota_path
+
+    logger.error("Debe especificar --flota, --dir o --input")
+    sys.exit(1)
 
 
 def main() -> None:
+    start_time = time.time()
     args = parse_args()
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(levelname)s: %(message)s",
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
     )
 
-    input_dir = Path(args.input)
-    output_dir = Path(args.output)
-
-    if not input_dir.is_dir():
-        logger.error("'%s' no es un directorio válido", input_dir)
-        sys.exit(1)
-
-    csv_files = validate_inputs(input_dir)
-    all_errors: list[str] = []
-
-    cat_fixtures, catalog_lookups, cat_errors = process_catalogos(csv_files["catalogos.csv"])
-    all_errors.extend(cat_errors)
-    print_report("catalogos.csv", len(cat_fixtures), cat_errors)
-
-    org_fixtures, org_lookups, org_errors = process_organizacion(
-        csv_files["organizacion.csv"],
-        catalog_lookups,
-    )
-    all_errors.extend(org_errors)
-    print_report("organizacion.csv", len(org_fixtures), org_errors)
-
-    veh_fixtures, veh_errors = process_vehiculos(
-        csv_files["vehiculos.csv"],
-        catalog_lookups,
-        org_lookups,
-    )
-    all_errors.extend(veh_errors)
-    print_report("vehiculos.csv", len(veh_fixtures), veh_errors)
-
-    total = len(cat_fixtures) + len(org_fixtures) + len(veh_fixtures)
-    logger.info("Total: %d registros, %d errores", total, len(all_errors))
-
-    if all_errors:
-        logger.warning("%d errores encontrados:", len(all_errors))
-        for err in all_errors:
-            logger.warning("  • %s", err)
-        if args.dry_run:
-            logger.error("Dry-run: no se escribirán fixtures por errores.")
-            sys.exit(1)
-
-    if args.dry_run:
-        logger.info("Dry-run completado. No se escribieron archivos.")
+    if args.input:
+        run_legacy_mode(args.input, args.output, is_dry_run=args.dry_run)
         return
 
-    write_outputs(output_dir, cat_fixtures, org_fixtures, veh_fixtures)
+    flota_path = _resolve_input_file(args)
+    if not flota_path.exists():
+        logger.error("No se encuentra el archivo de entrada: %s", flota_path)
+        sys.exit(1)
+
+    # 1. Load configuration and rules
+    rules = load_rules(args.rules)
+    mappings_dir = args.mappings
+    mapper = CanonicalMapper(mappings_dir)
+
+    # 2. Extract
+    logger.info("Extrayendo datos de %s ...", flota_path)
+    df, file_date = extract_flota(flota_path)
+    logger.info("Registros extraídos: %d filas (Fecha snapshot: %s)", len(df), file_date)
+
+    # 3. Transform
+    logger.info("Transformando y canonicalizando registros...")
+    raw_records = df.to_dict(orient="records")
+    normalized_rows: list[NormalizedRow] = []
+
+    for idx, raw_dict in enumerate(raw_records, start=2):
+        row = transform_row(idx, raw_dict, mapper, rules)
+        normalized_rows.append(row)
+
+    # 4. Validate and Deduplicate
+    logger.info("Validando reglas de negocio y deduplicando claves...")
+    validated_rows = validate_batch(normalized_rows, rules)
+
+    # 5. Load
+    out_dir = args.output
+    master_csv_path = out_dir / f"flota_normalizada.{file_date}.csv"
+    revision_csv_path = out_dir / f"revision.{file_date}.csv"
+
+    if not args.dry_run:
+        write_normalized_csv(master_csv_path, validated_rows)
+        write_revision_csv(revision_csv_path, validated_rows, mapper)
+
+        if args.excel:
+            master_excel_path = out_dir / f"flota_normalizada.{file_date}.xlsx"
+            write_normalized_excel(master_excel_path, validated_rows)
+
+        if args.fixtures:
+            logger.info("Generando fixtures Django...")
+            build_django_fixtures(validated_rows, out_dir)
+    else:
+        logger.info("Dry-run activado: validación y transformación completadas sin escribir.")
+
+    # 6. Report
+    elapsed = time.time() - start_time
+    report_text = generate_report(validated_rows, mapper, elapsed)
+    log_report(report_text, logger)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,7 @@
 from pathlib import Path
 
-import pytest
-
 from scf_import.builders.catalogos import build_catalogos
-from scf_import.readers import read_catalogos
+from scf_import.extract import read_catalogos
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data_test"
 
@@ -36,7 +34,7 @@ def test_build_catalogos() -> None:
 
 def test_build_catalogos_deduplicates() -> None:
     df = read_catalogos(DATA_DIR / "catalogos.csv")
-    fixtures, lookups, errors = build_catalogos(df)
+    fixtures, _lookups, errors = build_catalogos(df)
 
     marca_count = sum(1 for f in fixtures if f["model"] == "catalogos.marca")
     assert marca_count == 3  # Chevrolet, Ford, Toyota (sin duplicados)
@@ -46,7 +44,7 @@ def test_build_catalogos_deduplicates() -> None:
 
 def test_build_catalogos_fk_resolution() -> None:
     df = read_catalogos(DATA_DIR / "catalogos.csv")
-    fixtures, lookups, errors = build_catalogos(df)
+    fixtures, _lookups, errors = build_catalogos(df)
 
     assert errors == []
 

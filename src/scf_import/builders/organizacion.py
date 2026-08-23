@@ -4,7 +4,7 @@ import pandas as pd
 
 from scf_import.config import ORGANIZACION_MODELS
 from scf_import.normalizers import normalize_fk, normalize_name
-from scf_import.validators import validate_required_fields
+from scf_import.validate import validate_required_fields
 
 
 def build_organizacion(
