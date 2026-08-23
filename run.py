@@ -12,6 +12,7 @@ SRC_DIR = Path(__file__).resolve().parent / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from scf_import.config import load_rules
 from scf_import.extract import extract_flota, find_latest_flota_file
 from scf_import.load import (
     build_django_fixtures,
@@ -90,15 +91,16 @@ def _run_pipeline(
     print(f"✓ Registros extraídos: {total_rows:,} filas (Fecha snapshot: {file_date})")
 
     print("⏳ Normalizando y canonicalizando registros...")
+    rules = load_rules(RULES_PATH)
     mapper = CanonicalMapper(MAPPINGS_DIR)
     raw_records = df.to_dict(orient="records")
     normalized_rows = [
-        transform_row(idx, raw, mapper)
+        transform_row(idx, raw, mapper, rules)
         for idx, raw in enumerate(raw_records, start=2)
     ]
 
     print("⏳ Validando reglas de negocio y deduplicando claves...")
-    validated_rows = validate_batch(normalized_rows)
+    validated_rows = validate_batch(normalized_rows, rules)
 
     if not dry_run:
         print("⏳ Guardando archivos de salida...")
@@ -137,7 +139,7 @@ def _run_tests() -> None:
     import subprocess
     print("\n🧪 Ejecutando suite de pruebas, linter y comprobador de tipos...")
     python_exe = sys.executable
-    cmd = f"{python_exe} -m pytest && {python_exe} -m ruff check . && {python_exe} -m mypy src"
+    cmd = f"{python_exe} -m pytest && {python_exe} -m ruff check . && {python_exe} -m mypy src run.py"
     res = subprocess.run(cmd, shell=True, check=False)
     if res.returncode == 0:
         print("\n✅ Todas las pruebas, análisis de tipos y linter pasaron al 100%.")

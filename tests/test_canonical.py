@@ -66,3 +66,10 @@ class TestCanonicalMapper:
         assert mapper.suggest_canonical("marca", "") == []
         assert mapper.suggest_canonical("marca", "TOTALMENTE_DESCONOCIDO_123456789") == []
 
+    def test_suggest_canonical_caching(self) -> None:
+        mapper = CanonicalMapper(MAPPINGS_DIR)
+        first_call = mapper.suggest_canonical("marca", "CHEVROLETT", cutoff=0.7)
+        second_call = mapper.suggest_canonical("marca", "CHEVROLETT", cutoff=0.7)
+        assert first_call == second_call
+        assert ("marca", "CHEVROLETT", 0.7, 1) in mapper._suggestion_cache
+

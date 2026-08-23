@@ -1,4 +1,20 @@
+import logging
+import tomllib
+from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+def load_rules(rules_path: Path | str = "config/rules.toml") -> dict[str, Any]:
+    """Carga y parsea el archivo de reglas TOML."""
+    p = Path(rules_path)
+    if not p.exists():
+        logger.warning("Archivo de reglas no encontrado en %s. Usando defaults.", p)
+        return {}
+    with p.open("rb") as f:
+        return tomllib.load(f)
+
 
 # ATENCIÓN: CATALOG_MODELS se itera en orden de definición.
 # Las entidades con FK (modelo→marca, tipo_falla→sistema_afectado)

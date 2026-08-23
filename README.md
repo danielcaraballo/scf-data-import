@@ -184,7 +184,7 @@ python manage.py importar_flota output/flota_normalizada.2026-07-16.csv --dry-ru
 
 ## 🧪 Pruebas y Calidad de Código
 
-Ejecutar la suite completa de pruebas (60 tests), linter y comprobador de tipos estricto:
+Ejecutar la suite completa de pruebas (63 tests), linter y comprobador de tipos estricto:
 
 ```bash
 pytest

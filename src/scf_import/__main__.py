@@ -3,13 +3,12 @@ import argparse
 import logging
 import sys
 import time
-import tomllib
 from pathlib import Path
-from typing import Any
 
 from scf_import.builders.catalogos import build_catalogos
 from scf_import.builders.organizacion import build_organizacion
 from scf_import.builders.vehiculos import build_vehiculos
+from scf_import.config import load_rules
 from scf_import.extract import (
     extract_flota,
     find_latest_flota_file,
@@ -101,14 +100,6 @@ def parse_args() -> argparse.Namespace:
         help="Activar registro detallado (DEBUG)",
     )
     return parser.parse_args()
-
-
-def load_rules(rules_path: Path) -> dict[str, Any]:
-    if not rules_path.exists():
-        logger.warning("Archivo de reglas no encontrado en %s. Usando defaults.", rules_path)
-        return {}
-    with rules_path.open("rb") as f:
-        return tomllib.load(f)
 
 
 def run_legacy_mode(

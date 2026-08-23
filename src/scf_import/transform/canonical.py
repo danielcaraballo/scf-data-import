@@ -63,6 +63,8 @@ class CanonicalMapper:
         self.mappings_dir = Path(mappings_dir)
         self.tables: dict[str, dict[str, str]] = defaultdict(dict)
         self.canonical_sets: dict[str, set[str]] = defaultdict(set)
+        self._normalized_canonicals: dict[str, list[tuple[str, str]]] = defaultdict(list)
+        self._suggestion_cache: dict[tuple[str, str, float, int], list[tuple[str, float]]] = {}
         self.unknown_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
         self.load_mappings()
 
@@ -83,11 +85,13 @@ class CanonicalMapper:
                 )
                 self.tables[cat] = self.tables[canonical_source_cat]
                 self.canonical_sets[cat] = self.canonical_sets[canonical_source_cat]
+                self._normalized_canonicals[cat] = self._normalized_canonicals[canonical_source_cat]
                 continue
 
             table, canon_set = _load_mapping_file(filepath)
             self.tables[cat] = table
             self.canonical_sets[cat] = canon_set
+            self._normalized_canonicals[cat] = [(c, normalize_key(c)) for c in sorted(canon_set)]
             loaded_files.add(filename)
 
     def map_value(
@@ -136,20 +140,25 @@ class CanonicalMapper:
         if not cleaned:
             return []
 
-        canonicals = list(self.canonical_sets.get(category, set()))
-        if not canonicals:
+        cache_key = (category, cleaned, cutoff, n)
+        if cache_key in self._suggestion_cache:
+            return self._suggestion_cache[cache_key]
+
+        canon_pairs = self._normalized_canonicals.get(category, [])
+        if not canon_pairs:
             return []
 
         norm_raw = normalize_key(cleaned)
         scored: list[tuple[str, float]] = []
-        for canon in canonicals:
-            norm_canon = normalize_key(canon)
+        for canon, norm_canon in canon_pairs:
             ratio = difflib.SequenceMatcher(None, norm_raw, norm_canon).ratio()
             if ratio >= cutoff:
                 scored.append((canon, round(ratio, 2)))
 
         scored.sort(key=lambda x: x[1], reverse=True)
-        return scored[:n]
+        result = scored[:n]
+        self._suggestion_cache[cache_key] = result
+        return result
 
     def get_unknown_records(self) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
@@ -163,4 +172,5 @@ class CanonicalMapper:
                     }
                 )
         return results
+
 

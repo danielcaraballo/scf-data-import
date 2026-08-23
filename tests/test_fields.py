@@ -1,3 +1,4 @@
+from scf_import.config import load_rules
 from scf_import.transform.fields import (
     extract_subtype_from_model,
     normalize_anio,
@@ -100,3 +101,15 @@ class TestExtractSubtype:
         base, subtype = extract_subtype_from_model("CAMION PLATAFORMA (TIPO 350)")
         assert base == "CAMION PLATAFORMA"
         assert subtype == "TIPO 350"
+
+
+class TestLoadRules:
+    def test_load_existing_rules(self) -> None:
+        rules = load_rules("config/rules.toml")
+        assert "fields" in rules
+        assert "sap" in rules
+        assert "vin" in rules
+
+    def test_load_non_existing_rules(self) -> None:
+        rules = load_rules("config/non_existing_rules_xyz.toml")
+        assert rules == {}

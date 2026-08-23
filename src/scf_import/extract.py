@@ -136,14 +136,3 @@ def read_vehiculos(path: Path) -> pd.DataFrame:
     df = read_input(path)
     _check_columns(df, {"numero_economico", "vin", "marca", "modelo"}, "vehiculos.csv")
     return df
-
-
-def read_flota(path: Path) -> pd.DataFrame:
-    df, _ = extract_flota(path)
-    if "numero_economico" in df.columns:
-        df["numero_economico"] = df["numero_economico"].replace(
-            ["0", "NO POSEE", "N0 P0SEE", "S/P", "S/N", "S/I", "N/A"], ""
-        )
-    if "unidad_usuaria" in df.columns and "gerencia" in df.columns:
-        df["unidad_usuaria"] = df["gerencia"]
-    return df

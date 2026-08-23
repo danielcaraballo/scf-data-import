@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scf-data-import"
-version = "1.0.0"
+version = "1.4.1"
 description = "ETL pipeline to import SCF data from CSV/Excel into Django fixtures"
 requires-python = ">=3.11"
 dependencies = [
