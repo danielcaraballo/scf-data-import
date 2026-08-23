@@ -70,7 +70,7 @@ class TestNormalizeRow:
         }
         fk_fields = {"marca"}
         result = normalize_row(row, fk_fields)
-        assert result["marca"] == "chevrolet"
+        assert result["marca"] == "Chevrolet"
         assert result["vin"] == "ABC123"
         assert result["placa"] == "AB-123"
         assert result["anio"] == 2022

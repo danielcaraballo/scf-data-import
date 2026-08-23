@@ -13,7 +13,7 @@ def normalize_name(val: str) -> str:
 
 
 def normalize_fk(val: str) -> str:
-    return strip_value(val)
+    return normalize_name(val)
 
 
 def normalize_vin(val: str) -> str:

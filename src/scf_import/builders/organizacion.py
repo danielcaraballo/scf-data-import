@@ -46,6 +46,11 @@ def build_organizacion(
                     if source_lookup and fk_name in source_lookup:
                         fields[field] = source_lookup[fk_name]
 
+            if config_key == "centro_servicio" and "estado" not in fields:
+                msg = f"organizacion centro_servicio '{nombre}': estado no resuelto o ausente"
+                errors.append(msg)
+                continue
+
             records.append(
                 {
                     "model": model_name,

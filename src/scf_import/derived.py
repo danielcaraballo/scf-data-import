@@ -46,7 +46,7 @@ def derive_catalogos_df(flota_df: pd.DataFrame) -> pd.DataFrame:
     for _, row in modelo_marca.iterrows():
         nombre = str(row["modelo"]).strip()
         marca = str(row["marca"]).strip() if pd.notna(row["marca"]) else ""
-        if nombre and nombre.lower() not in seen_m:
+        if nombre and marca and nombre.lower() not in seen_m:
             seen_m.add(nombre.lower())
             records.append(
                 {"tipo": "modelo", "nombre": nombre, "marca": marca, "sistema": ""}

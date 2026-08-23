@@ -45,6 +45,10 @@ def build_catalogos(
                 if fk_name and lookup_key in lookups and fk_name in lookups[lookup_key]:
                     fields[model_field] = lookups[lookup_key][fk_name]
 
+            if config_key == "modelo" and "marca" not in fields:
+                errors.append(f"catalogos modelo '{nombre}': marca no resuelta o ausente")
+                continue
+
             records.append(
                 {
                     "model": model_name,
