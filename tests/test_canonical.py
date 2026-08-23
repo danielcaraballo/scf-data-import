@@ -47,3 +47,22 @@ class TestCanonicalMapper:
         val, is_known = mapper.map_value("marca", "")
         assert is_known is True
         assert val == ""
+
+    def test_suggest_canonical_fuzzy_match(self) -> None:
+        mapper = CanonicalMapper(MAPPINGS_DIR)
+        # Typo in CHEVROLET -> CHEVROLETT
+        suggestions = mapper.suggest_canonical("marca", "CHEVROLETT", cutoff=0.7)
+        assert len(suggestions) >= 1
+        sug_name, score = suggestions[0]
+        assert sug_name == "CHEVROLET"
+        assert score > 0.8
+
+        # Typo in TOYOTA -> TOYOTTA
+        suggestions = mapper.suggest_canonical("marca", "TOYOTTA", cutoff=0.7)
+        assert len(suggestions) >= 1
+        assert suggestions[0][0] == "TOYOTA"
+
+        # Empty / non-matching
+        assert mapper.suggest_canonical("marca", "") == []
+        assert mapper.suggest_canonical("marca", "TOTALMENTE_DESCONOCIDO_123456789") == []
+

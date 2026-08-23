@@ -89,11 +89,21 @@ def generate_report(
     if unknown_items:
         lines.append("")
         lines.append("--- Valores Desconocidos Frecuentes (para alimentar mappings) ---")
-        lines.extend(
-            f"  • [{item['categoria'].upper()}] '{item['valor_original']}' "
-            f"({item['ocurrencias']} ocurrencias)"
-            for item in unknown_items[:15]
-        )
+        for item in unknown_items[:15]:
+            cat = item["categoria"]
+            orig = item["valor_original"]
+            occurrences = item["ocurrencias"]
+            suggestions = mapper.suggest_canonical(cat, orig, cutoff=0.6, n=1)
+            if suggestions:
+                sug_name, score = suggestions[0]
+                lines.append(
+                    f"  • [{cat.upper()}] '{orig}' ({occurrences} ocurrencias) "
+                    f"→ ¿Quizás '{sug_name}' ({int(score * 100)}% similitud)?"
+                )
+            else:
+                lines.append(
+                    f"  • [{cat.upper()}] '{orig}' ({occurrences} ocurrencias)"
+                )
 
     lines.append("==================================================")
     return "\n".join(lines)

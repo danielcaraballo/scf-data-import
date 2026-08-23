@@ -1,4 +1,5 @@
 import csv
+import difflib
 import logging
 from collections import defaultdict
 from pathlib import Path
@@ -124,6 +125,32 @@ class CanonicalMapper:
     def get_canonical_catalog(self, category: str) -> list[str]:
         return sorted(self.canonical_sets.get(category, set()))
 
+    def suggest_canonical(
+        self,
+        category: str,
+        raw_value: Any,
+        cutoff: float = 0.6,
+        n: int = 1,
+    ) -> list[tuple[str, float]]:
+        cleaned = clean_str(raw_value)
+        if not cleaned:
+            return []
+
+        canonicals = list(self.canonical_sets.get(category, set()))
+        if not canonicals:
+            return []
+
+        norm_raw = normalize_key(cleaned)
+        scored: list[tuple[str, float]] = []
+        for canon in canonicals:
+            norm_canon = normalize_key(canon)
+            ratio = difflib.SequenceMatcher(None, norm_raw, norm_canon).ratio()
+            if ratio >= cutoff:
+                scored.append((canon, round(ratio, 2)))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:n]
+
     def get_unknown_records(self) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
         for cat, val_counts in sorted(self.unknown_counts.items()):
@@ -136,3 +163,4 @@ class CanonicalMapper:
                     }
                 )
         return results
+

@@ -157,11 +157,18 @@ def write_normalized_excel(path: Path, rows: list[NormalizedRow]) -> None:
 def _resolve_revision_entry(
     flag: str,
     row: NormalizedRow,
+    mapper: CanonicalMapper | None = None,
 ) -> tuple[str, str, str, str]:
     if flag in _STATIC_REVISION_MAP:
         campo, orig_key, norm_key, detalle = _STATIC_REVISION_MAP[flag]
         val_orig = row.raw_data.get(orig_key, "") if orig_key else "SAP/VIN/Placa vacíos"
         val_norm = str(row.canonical.get(norm_key, "")) if norm_key else ""
+        if mapper and flag.endswith("_DESCONOCIDO") and val_orig:
+            cat = flag.replace("_DESCONOCIDO", "").lower()
+            suggestions = mapper.suggest_canonical(cat, val_orig)
+            if suggestions:
+                sug_val, score = suggestions[0]
+                detalle = f"{detalle}. Sugerencia: '{sug_val}' ({int(score * 100)}% similitud)"
         return campo, val_orig, val_norm, detalle
 
     if flag == "VIN_LONGITUD_INVALIDA":
@@ -196,7 +203,7 @@ def _resolve_revision_entry(
 def write_revision_csv(
     path: Path,
     rows: list[NormalizedRow],
-    _mapper: CanonicalMapper | None = None,
+    mapper: CanonicalMapper | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     revision_records: list[dict[str, Any]] = []
@@ -207,7 +214,7 @@ def write_revision_csv(
         placa = str(row.canonical.get("placa", ""))
 
         for flag in row.flags:
-            campo, val_orig, val_norm, detalle = _resolve_revision_entry(flag, row)
+            campo, val_orig, val_norm, detalle = _resolve_revision_entry(flag, row, mapper)
             revision_records.append(
                 {
                     "fila_origen": row.row_id,

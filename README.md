@@ -8,6 +8,11 @@ Pipeline ETL modular, idempotente y extensible para la ingestión, normalizació
 
 ```
 scf-data-import/
+├── run.bat                   # Lanzador interactivo para Windows (doble clic)
+├── run.sh                    # Lanzador interactivo para Linux/macOS
+├── run.py                    # Menú interactivo multiplataforma en Python
+├── django_commands/          # Comando Django para sincronización periódica (Upsert)
+│   └── importar_flota.py
 ├── config/
 │   ├── mappings/             # Archivos CSV editables para canonicalización de catálogos
 │   │   ├── adscripcion.csv
@@ -135,6 +140,8 @@ Los mappings viven en `config/mappings/*.csv` y pueden ser editados directamente
 - **`estados.csv`**: Normaliza nombres de estado (`CAPITAL` → `DISTRITO CAPITAL`, `LA GUAIRA` → `VARGAS`).
 - **`emplazamientos.csv`**: Normaliza nombres de centros de servicio, subestaciones y talleres.
 
+- **Sugerencias Inteligentes por Fuzzy Matching**: El sistema utiliza coincidencia difusa (`difflib`) para detectar errores ortográficos leves en valores desconocidos y sugerir el valor canónico más probable en el reporte y en `revision.csv` (ej. *"SEDE OPERATVA"* $\rightarrow$ *¿Quizás 'Sede Operativa De La Corporacion' (94% similitud)?*).
+
 ---
 
 ## 🔒 Seguridad y Privacidad de Datos
@@ -146,9 +153,10 @@ Este repositorio sigue las mejores prácticas de seguridad de la información (I
 
 ---
 
-## 🔄 Carga de Fixtures en Django
+## 🔄 Integración con Django / SCF
 
-Para poblar la base de datos de Django manteniendo la integridad referencial de Foreign Keys:
+### 1. Carga Inicial del Sistema (Bootstrap con Fixtures)
+Para sembrar la base de datos por primera vez respetando la integridad referencial de Foreign Keys:
 
 ```bash
 # 1. Catálogos base (Marcas, Modelos, Colores, Tipos, Estatus, Combustibles, etc.)
@@ -161,15 +169,26 @@ python manage.py loaddata output/fixtures/02_organizacion.json
 python manage.py loaddata output/fixtures/03_vehiculos.json
 ```
 
+### 2. Sincronizaciones Periódicas (Ingesta Continua sin romper relaciones)
+Para actualizar la base de datos con nuevos snapshots frecuentes sin perder el historial de mantenimientos ni alterar los IDs de vehículos existentes, use el comando de gestión provisto en [`django_commands/importar_flota.py`](file:///home/daniel/workspace/scf-data-import/django_commands/importar_flota.py):
+
+```bash
+# Ejecutar Upsert sobre la base de datos Django desde el Excel o CSV maestro:
+python manage.py importar_flota output/flota_normalizada.2026-07-16.xlsx
+
+# O simular previamente sin guardar cambios:
+python manage.py importar_flota output/flota_normalizada.2026-07-16.csv --dry-run
+```
+
 ---
 
 ## 🧪 Pruebas y Calidad de Código
 
-Ejecutar la suite completa de pruebas, linter y comprobador de tipos estricto:
+Ejecutar la suite completa de pruebas (60 tests), linter y comprobador de tipos estricto:
 
 ```bash
 pytest
 ruff check .
-mypy src
+mypy src run.py
 ```
 

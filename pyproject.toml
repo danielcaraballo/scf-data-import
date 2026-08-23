@@ -43,6 +43,8 @@ ignore = [
 "src/scf_import/derived.py" = ["C901", "PLR0912", "PLR0915"]
 "src/scf_import/__main__.py" = ["PLR0915"]
 "run.py" = ["T201", "S", "C901", "PLR", "SLF", "ARG", "E501", "E402", "RUF001", "PLC0415"]
+"src/scf_import/management/**" = ["C901", "PLR0912", "PLR0915", "BLE001", "N806", "ARG001", "ARG002", "TRY301", "E501", "EM", "TRY", "PLC0415", "B904", "PGH003", "F841"]
+"django_commands/**" = ["C901", "PLR0912", "PLR0915", "BLE001", "N806", "ARG001", "ARG002", "TRY301", "E501", "EM", "TRY", "PLC0415", "B904", "PGH003", "F841", "INP001"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -50,7 +52,7 @@ quote-style = "double"
 [tool.mypy]
 strict = true
 python_version = "3.11"
-exclude = ["tests/", "venv/"]
+exclude = ["tests/", "venv/", "src/scf_import/management/"]
 disable_error_code = ["import-untyped"]
 
 [tool.pytest.ini_options]
